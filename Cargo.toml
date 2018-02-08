@@ -1,0 +1,8 @@
+[package]
+name = "filecache"
+version = "0.1.0"
+authors = ["Scott Wilson <scott@propersquid.com>"]
+
+[dependencies]
+ring = "0.12.1"
+data-encoding = "2.1.0"
