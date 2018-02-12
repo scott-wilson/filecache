@@ -1,3 +1,6 @@
+extern crate data_encoding;
+extern crate ring;
+
 pub mod chunk;
 pub mod bundle;
 mod digestutils;

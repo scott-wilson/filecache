@@ -1,19 +1,17 @@
-extern crate data_encoding;
-
 use std::cmp;
 use std::io::prelude::*;
 use std::io::{BufReader, Error, SeekFrom};
 use std::path::Path;
-use std::fs::{File};
-use self::data_encoding::{HEXLOWER};
-use super::digestutils::{calculate_file_digest};
+use std::fs::File;
+use data_encoding::HEXLOWER;
+use super::digestutils::calculate_file_digest;
 use super::chunk::{Chunk, MAX_CHUNK_SIZE};
 
 pub struct Bundle<'a> {
-    _id: String,
-    _path: &'a Path,
-    _size: usize,
-    _chunks: Vec<Chunk>,
+    id: String,
+    path: &'a Path,
+    size: usize,
+    chunks: Vec<Chunk>,
 }
 
 impl<'a> Bundle<'a> {
@@ -24,14 +22,14 @@ impl<'a> Bundle<'a> {
         reader.seek(SeekFrom::Start(0))?;
         let (chunks, size) = get_chunks(&mut reader)?;
 
-        return Ok(Bundle{
-            _id: HEXLOWER.encode(digest.as_ref()),
-            _path: path.clone(),
-            _chunks: chunks,
-            _size: size,
-        });
+        Ok(Bundle{
+            id: HEXLOWER.encode(digest.as_ref()),
+            path: path,
+            chunks: chunks,
+            size: size,
+        })
     }
-    pub fn from_ids(ids: Vec<String>, file_id: String, size: usize, cache_path: &Path) -> Result<Bundle, Error> {
+    pub fn from_ids(ids: &[String], file_id: String, size: usize, cache_path: &'a Path) -> Result<Bundle<'a>, Error> {
         let mut chunks: Vec<Chunk> = Vec::with_capacity(ids.len());
 
         for id in ids.iter() {
@@ -39,49 +37,49 @@ impl<'a> Bundle<'a> {
             chunks.push(chunk);
         }
 
-        return Ok(Bundle {
-            _id: file_id,
-            _path: cache_path,
-            _chunks: chunks,
-            _size: size,
-            });
+        Ok(Bundle {
+            id: file_id,
+            path: cache_path,
+            chunks: chunks,
+            size: size,
+        })
     }
 }
 
 impl<'a> Bundle<'a> {
-    pub fn id(&self) -> &String {&self._id}
-    pub fn path(&self) -> &Path {&self._path}
-    pub fn size(&self) -> &usize {&self._size}
-    pub fn chunks(&self) -> &Vec<Chunk> {&self._chunks}
+    pub fn id(&self) -> &String {&self.id}
+    pub fn path(&self) -> &Path {self.path}
+    pub fn size(&self) -> usize {self.size}
+    pub fn chunks(&self) -> &Vec<Chunk> {&self.chunks}
 }
 
 impl<'a> Bundle<'a> {
     pub fn write_to_cache(&self, path: &Path) -> Result<(), Error> {
-        for chunk in self._chunks.iter() {
-            chunk.write_to_cache(&path)?;
+        for chunk in &self.chunks {
+            chunk.write_to_cache(path)?;
         }
-        return Ok(());
+        Ok(())
     }
     pub fn write_to_path(&self, path: &Path) -> Result<(), Error> {
         let mut file = File::create(&path)?;
-        let mut total_size: usize = self.size().clone();
+        let mut total_size = self.size();
 
-        for chunk in self._chunks.iter() {
-            let chunk_size = cmp::min(total_size, *chunk.size());
-            file.write(&chunk.buffer()[..chunk_size])?;
+        for chunk in &self.chunks {
+            let chunk_size = cmp::min(total_size, chunk.size());
+            file.write_all(&chunk.buffer()[..chunk_size])?;
             total_size -= chunk_size;
         }
 
-        return Ok(());
+        Ok(())
     }
 }
 
-fn get_chunks(reader: &mut Read) -> Result<(Vec<Chunk>, usize), Error> {
-    let mut buffer: Vec<u8> = Vec::with_capacity(MAX_CHUNK_SIZE);
+fn get_chunks<R: Read>(reader: &mut R) -> Result<(Vec<Chunk>, usize), Error> {
+    let mut buffer = Vec::with_capacity(MAX_CHUNK_SIZE);
     buffer.resize(MAX_CHUNK_SIZE, 0);
-    let mut chunks: Vec<Chunk> = Vec::new();
+    let mut chunks = Vec::new();
     let mut chunk_size: usize;
-    let mut size: usize = 0;
+    let mut size = 0;
 
     loop {
         chunk_size = reader.read(&mut buffer)?;
@@ -94,5 +92,5 @@ fn get_chunks(reader: &mut Read) -> Result<(Vec<Chunk>, usize), Error> {
         chunks.push(Chunk::from_buffer(&buffer));
     }
 
-    return Ok((chunks, size));
+    Ok((chunks, size))
 }
