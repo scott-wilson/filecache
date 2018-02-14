@@ -7,15 +7,15 @@ use data_encoding::HEXLOWER;
 use super::digestutils::calculate_file_digest;
 use super::chunk::{Chunk, MAX_CHUNK_SIZE};
 
-pub struct Bundle<'a> {
+pub struct Bundle<P: AsRef<Path>> {
     id: String,
-    path: &'a Path,
+    path: P,
     size: usize,
     chunks: Vec<Chunk>,
 }
 
-impl<'a> Bundle<'a> {
-    pub fn from_path(path: &Path) -> Result<Bundle, Error> {
+impl<P: AsRef<Path>> Bundle<P> {
+    pub fn from_path(path: P) -> Result<Bundle<P>, Error> {
         let file = File::open(&path)?;
         let mut reader = BufReader::new(file);
         let digest = calculate_file_digest(&mut reader)?;
@@ -29,11 +29,12 @@ impl<'a> Bundle<'a> {
             size: size,
         })
     }
-    pub fn from_ids(ids: &[String], file_id: String, size: usize, cache_path: &'a Path) -> Result<Bundle<'a>, Error> {
+
+    pub fn from_ids(ids: &[String], file_id: String, size: usize, cache_path: P) -> Result<Bundle<P>, Error> {
         let mut chunks: Vec<Chunk> = Vec::with_capacity(ids.len());
 
         for id in ids.iter() {
-            let chunk = Chunk::from_cache(id, cache_path)?;
+            let chunk = Chunk::from_cache(id, &cache_path)?;
             chunks.push(chunk);
         }
 
@@ -46,21 +47,21 @@ impl<'a> Bundle<'a> {
     }
 }
 
-impl<'a> Bundle<'a> {
+impl<P: AsRef<Path>> Bundle<P> {
     pub fn id(&self) -> &String {&self.id}
-    pub fn path(&self) -> &Path {self.path}
+    pub fn path(&self) -> &Path {self.path.as_ref()}
     pub fn size(&self) -> usize {self.size}
     pub fn chunks(&self) -> &Vec<Chunk> {&self.chunks}
 }
 
-impl<'a> Bundle<'a> {
-    pub fn write_to_cache<P: AsRef<Path>>(&self, path: P) -> Result<(), Error> {
+impl<P: AsRef<Path>> Bundle<P> {
+    pub fn write_to_cache(&self, path: P) -> Result<(), Error> {
         for chunk in &self.chunks {
             chunk.write_to_cache(path.as_ref())?;
         }
         Ok(())
     }
-    pub fn write_to_path<P: AsRef<Path>>(&self, path: P) -> Result<(), Error> {
+    pub fn write_to_path(&self, path: P) -> Result<(), Error> {
         let mut file = File::create(path.as_ref())?;
         let mut total_size = self.size();
 
