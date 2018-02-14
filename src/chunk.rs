@@ -23,8 +23,8 @@ impl Chunk {
         Chunk {id: id, size: buffer.len(), buffer: inner_buffer}
     }
 
-    pub fn from_cache(id: &str, cache_path: &Path) -> Result<Chunk, Error> {
-        let path = Path::new(cache_path).join(&id);
+    pub fn from_cache<P: AsRef<Path>>(id: &str, cache_path: P) -> Result<Chunk, Error> {
+        let path = cache_path.as_ref().join(&id);
         let file = File::open(&path)?;
         let mut reader = BufReader::new(&file);
         let mut buffer = Vec::with_capacity(MAX_CHUNK_SIZE);
@@ -43,8 +43,8 @@ impl Chunk {
 }
 
 impl Chunk {
-    pub fn write_to_cache(&self, path: &Path) -> Result<(), Error> {
-        let path = path.join(&self.id);
+    pub fn write_to_cache<P: AsRef<Path>>(&self, path: P) -> Result<(), Error> {
+        let path = path.as_ref().join(&self.id);
         let mut file = File::create(&path)?;
         file.write_all(&self.buffer)?;
 

@@ -54,14 +54,14 @@ impl<'a> Bundle<'a> {
 }
 
 impl<'a> Bundle<'a> {
-    pub fn write_to_cache(&self, path: &Path) -> Result<(), Error> {
+    pub fn write_to_cache<P: AsRef<Path>>(&self, path: P) -> Result<(), Error> {
         for chunk in &self.chunks {
-            chunk.write_to_cache(path)?;
+            chunk.write_to_cache(path.as_ref())?;
         }
         Ok(())
     }
-    pub fn write_to_path(&self, path: &Path) -> Result<(), Error> {
-        let mut file = File::create(&path)?;
+    pub fn write_to_path<P: AsRef<Path>>(&self, path: P) -> Result<(), Error> {
+        let mut file = File::create(path.as_ref())?;
         let mut total_size = self.size();
 
         for chunk in &self.chunks {
